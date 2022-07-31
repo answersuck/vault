@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14.4-alpine
+        env:
+          POSTGRES_USER: "user"
+          POSTGRES_PASSWORD: "pass"
+          POSTGRES_DB: "postgres"
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18.4
+
+    - name: Build
+      run: go build ./cmd/app/
+
+    - name: Run tests
+      run: go test -v -race -count=1 ./...
+      env:
+        INTEGRATION_TESTDB: true
+        INTEGRATION_LOGLEVE: debug
+        PG_URL: ${{ secrets.TESTDB_URL }}
+
